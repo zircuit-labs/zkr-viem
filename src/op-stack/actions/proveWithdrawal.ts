@@ -21,10 +21,7 @@ import type { GetContractAddressParameter } from '../types/contract.js'
 import {
   type EstimateProveWithdrawalGasErrorType,
   type EstimateProveWithdrawalGasParameters,
-  type EstimateProveZircuitWithdrawalGasErrorType,
-  type EstimateProveZircuitWithdrawalGasParameters,
   estimateProveWithdrawalGas,
-  estimateProveZircuitWithdrawalGas,
 } from './estimateProveWithdrawalGas.js'
 
 export type ProveWithdrawalParameters<
@@ -139,135 +136,6 @@ export async function proveWithdrawal<
       ? await estimateProveWithdrawalGas(
           client,
           parameters as EstimateProveWithdrawalGasParameters,
-        )
-      : (gas ?? undefined)
-
-  return writeContract(client, {
-    account: account!,
-    abi: portalAbi,
-    address: portalAddress,
-    chain,
-    functionName: 'proveWithdrawalTransaction',
-    args: [withdrawal, l2OutputIndex, outputRootProof, withdrawalProof],
-    gas: gas_,
-    maxFeePerGas,
-    maxPriorityFeePerGas,
-    nonce,
-  } satisfies WriteContractParameters as any)
-}
-
-// New for Zircuit Withdrawals
-
-export type ProveZircuitWithdrawalParameters<
-  chain extends Chain | undefined = Chain | undefined,
-  account extends Account | undefined = Account | undefined,
-  chainOverride extends Chain | undefined = Chain | undefined,
-  _derivedChain extends Chain | undefined = DeriveChain<chain, chainOverride>,
-> = UnionEvaluate<
-  UnionOmit<
-    FormattedTransactionRequest<_derivedChain>,
-    | 'accessList'
-    | 'blobs'
-    | 'data'
-    | 'from'
-    | 'gas'
-    | 'maxFeePerBlobGas'
-    | 'gasPrice'
-    | 'to'
-    | 'type'
-    | 'value'
-  >
-> &
-  GetAccountParameter<account, Account | Address> &
-  GetChainParameter<chain, chainOverride> &
-  GetContractAddressParameter<_derivedChain, 'portal'> & {
-    /**
-     * Gas limit for transaction execution on the L1.
-     * `null` to skip gas estimation & defer calculation to signer.
-     */
-    gas?: bigint | null | undefined
-    l2OutputIndex: bigint
-    outputRootProof: {
-      version: Hex
-      stateRoot: Hex
-      messagePasserStorageRoot: Hex
-      latestBlockhash: Hex
-    }
-    withdrawalProof: Hex
-    withdrawal: {
-      data: Hex
-      gasLimit: bigint
-      nonce: bigint
-      sender: Address
-      target: Address
-      value: bigint
-    }
-  }
-export type ProveZircuitWithdrawalReturnType = Hash
-export type ProveZircuitWithdrawalErrorType =
-  | EstimateProveZircuitWithdrawalGasErrorType
-  | WriteContractErrorType
-  | ErrorType
-
-/**
- * Proves a withdrawal that occurred on an L2. Used in the Withdrawal flow.
- *
- * @param client - Client to use
- * @param parameters - {@link ProveZircuitWithdrawalParameters}
- * @returns The prove transaction hash. {@link ProveZircuitWithdrawalReturnType}
- *
- * @example
- * import { createWalletClient, http } from 'viem'
- * import { mainnet, optimism } from 'viem/chains'
- * import { proveZircuitWithdrawal } from 'viem/op-stack'
- *
- * const walletClientL1 = createWalletClient({
- *   chain: mainnet,
- *   transport: http(),
- * })
- *
- * const request = await proveZircuitWithdrawal(walletClientL1, {
- *   account: '0xA0Cf798816D4b9b9866b5330EEa46a18382f251e',
- *   l2OutputIndex: 4529n,
- *   outputRootProof: { ... },
- *   targetChain: optimism,
- *   withdrawalProof: ` ... `,
- *   withdrawal: { ... },
- * })
- */
-export async function proveZircuitWithdrawal<
-  chain extends Chain | undefined,
-  account extends Account | undefined,
-  chainOverride extends Chain | undefined = undefined,
->(
-  client: Client<Transport, chain, account>,
-  parameters: ProveZircuitWithdrawalParameters<chain, account, chainOverride>,
-): Promise<ProveZircuitWithdrawalReturnType> {
-  const {
-    account,
-    chain = client.chain,
-    gas,
-    l2OutputIndex,
-    maxFeePerGas,
-    maxPriorityFeePerGas,
-    nonce,
-    outputRootProof,
-    targetChain,
-    withdrawalProof,
-    withdrawal,
-  } = parameters
-
-  const portalAddress = (() => {
-    if (parameters.portalAddress) return parameters.portalAddress
-    if (chain) return targetChain!.contracts.portal[chain.id].address
-    return Object.values(targetChain!.contracts.portal)[0].address
-  })()
-
-  const gas_ =
-    typeof gas !== 'bigint' && gas !== null
-      ? await estimateProveZircuitWithdrawalGas(
-          client,
-          parameters as EstimateProveZircuitWithdrawalGasParameters,
         )
       : (gas ?? undefined)
 

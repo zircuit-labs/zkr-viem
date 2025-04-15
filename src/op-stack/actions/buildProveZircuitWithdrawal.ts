@@ -24,7 +24,7 @@ import { contracts } from '../contractsZircuit.js'
 import type { GetWithdrawalsErrorType } from '../utils/getWithdrawals.js'
 import type { GetGameReturnType } from './getGame.js'
 import type { GetL2OutputReturnType } from './getL2Output.js'
-import type { ProveZircuitWithdrawalParameters } from './proveWithdrawal.js'
+import type { ProveWithdrawalParameters } from './proveWithdrawal.js'
 
 import { getStorageAt } from '../../actions/index.js'
 import { getLogs } from '../../actions/index.js'
@@ -38,7 +38,7 @@ import { getWithdrawals } from '../utils/getWithdrawals.js'
 const outputRootProofVersion =
   '0x0000000000000000000000000000000000000000000000000000000000000000' as const
 
-// export type BuildProveZircuitWithdrawalParameters<
+// export type BuildProveWithdrawalParameters<
 //   chain extends Chain | undefined = Chain | undefined,
 //   account extends Account | undefined = Account | undefined,
 //   chainOverride extends Chain | undefined = Chain | undefined,
@@ -76,7 +76,7 @@ export type BuildProveZircuitWithdrawalReturnType<
     | undefined,
 > = Prettify<
   Pick<
-    ProveZircuitWithdrawalParameters,
+    ProveWithdrawalParameters,
     'l2OutputIndex' | 'outputRootProof' | 'withdrawalProof' | 'withdrawal'
   > & {
     account: DeriveAccount<account, accountOverride>
@@ -108,7 +108,7 @@ export type BuildProveZircuitWithdrawalErrorType =
  *
  * const args = await buildProveZircuitWithdrawal(publicClientL2, {
  *   output: { ... },
- *   withdrawal: { ... },
+ *   receipt : { ... },
  * })
  */
 export async function buildProveZircuitWithdrawal<
@@ -170,7 +170,7 @@ export async function buildProveZircuitWithdrawal<
     treeHeight,
   )
 
-  //
+  // Fetch the outputRoot proof parts from the outputRoot block
   const outputRootBlock = await getBlock(client, {
     blockNumber: l2OutputRootBlockNumber,
   })
@@ -185,7 +185,7 @@ export async function buildProveZircuitWithdrawal<
       version: outputRootProofVersion,
     },
     targetChain: chain,
-    withdrawalProof: withdrawalProof,
+    withdrawalProof: [withdrawalProof],
     withdrawal,
   } as unknown as BuildProveZircuitWithdrawalReturnType<
     chain,
