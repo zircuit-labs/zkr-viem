@@ -21,9 +21,9 @@ import type { GetContractAddressParameter } from '../types/contract.js'
 import {
   type EstimateProveWithdrawalGasErrorType,
   type EstimateProveWithdrawalGasParameters,
-  estimateProveWithdrawalGas,
   type EstimateProveZircuitWithdrawalGasErrorType,
   type EstimateProveZircuitWithdrawalGasParameters,
+  estimateProveWithdrawalGas,
   estimateProveZircuitWithdrawalGas,
 } from './estimateProveWithdrawalGas.js'
 
@@ -156,14 +156,7 @@ export async function proveWithdrawal<
   } satisfies WriteContractParameters as any)
 }
 
-
-
-
-
-
-
 // New for Zircuit Withdrawals
-
 
 export type ProveZircuitWithdrawalParameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -215,7 +208,6 @@ export type ProveZircuitWithdrawalErrorType =
   | EstimateProveZircuitWithdrawalGasErrorType
   | WriteContractErrorType
   | ErrorType
-
 
 /**
  * Proves a withdrawal that occurred on an L2. Used in the Withdrawal flow.
@@ -292,8 +284,3 @@ export async function proveZircuitWithdrawal<
     nonce,
   } satisfies WriteContractParameters as any)
 }
-
-
-
-
-

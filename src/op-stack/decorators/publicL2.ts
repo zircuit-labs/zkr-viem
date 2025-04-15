@@ -156,8 +156,6 @@ export type PublicActionsL2<
     >
   >
 
-
-  
   /**
    * Builds the transaction that proves a withdrawal was initiated on an L2. Used in the Withdrawal flow.
    *

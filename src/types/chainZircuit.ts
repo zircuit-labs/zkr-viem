@@ -3,7 +3,7 @@ import type { Chain as BaseChain, ChainContract } from './chain.js'
 import type { Hex } from './misc.js'
 
 export interface L2ToL1MessagePasserContract extends ChainContract {
-  withdrawalRootStorageSlot: Hex,
+  withdrawalRootStorageSlot: Hex
   msgNonceStorageSlot: Hex
 }
 
@@ -24,8 +24,12 @@ export interface ZircuitContractsMap {
 export type ZircuitContracts = Prettify<ZircuitContractsMap>
 
 export type Chain<
-  formatters extends BaseChain['formatters'] | undefined = BaseChain['formatters'] | undefined,
-  custom extends Record<string, unknown> | undefined = Record<string, unknown> | undefined,
+  formatters extends BaseChain['formatters'] | undefined =
+    | BaseChain['formatters']
+    | undefined,
+  custom extends Record<string, unknown> | undefined =
+    | Record<string, unknown>
+    | undefined,
 > = Omit<BaseChain<formatters, custom>, 'contracts'> & {
   contracts?: ZircuitContracts | undefined
 }

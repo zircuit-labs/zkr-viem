@@ -145,10 +145,7 @@ export async function estimateProveWithdrawalGas<
   return estimateContractGas(client, params as any)
 }
 
-
-
 // New for Zircuit Withdrawals
-
 
 export type EstimateProveZircuitWithdrawalGasParameters<
   chain extends Chain | undefined = Chain | undefined,
