@@ -544,7 +544,8 @@ export function publicActionsL2() {
     return {
       buildDepositTransaction: (args) => buildDepositTransaction(client, args),
       buildProveWithdrawal: (args) => buildProveWithdrawal(client, args),
-      buildProveZircuitWithdrawal: (args) => buildProveZircuitWithdrawal(client, args),
+      buildProveZircuitWithdrawal: (args) =>
+        buildProveZircuitWithdrawal(client, args),
       estimateContractL1Fee: (args) => estimateContractL1Fee(client, args),
       estimateContractL1Gas: (args) => estimateContractL1Gas(client, args),
       estimateContractTotalFee: (args) =>
