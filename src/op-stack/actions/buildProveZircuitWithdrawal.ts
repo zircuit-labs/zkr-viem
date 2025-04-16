@@ -279,7 +279,7 @@ export function computeHeightFromMsgNonce(msgNonceBigInt: bigint): number {
 // Computes the height of the tree from node indexed nodeIndex
 // The height is the number of bits needed to represent the msgNonce
 function merkleTreeHeight(nodeIndex: number): number {
-  let index = nodeIndex;
+  let index = nodeIndex
   if (index < 0) {
     throw new Error('Node index must be a non-negative integer')
   }
