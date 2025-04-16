@@ -249,6 +249,11 @@ export function initializeRightHashes(): Hex[] {
 // Computes the height of the withdrawal tree from the msgNonce
 // The height is the number of bits needed to represent the msgNonce
 export function computeHeightFromMsgNonce(msgNonceBigInt: bigint): number {
+  // Check if msgNonce is a non-negative integer
+  if (msgNonceBigInt < 0n) {
+    throw new Error('msgNonce must be a non-negative integer')
+  }
+
   // Maximum allowed value for msgNonce is 2^40
   // This is hardcoded in the L2ToL1MessagePasser contract
   const MAX_MSG_NONCE = BigInt(1) << BigInt(40) // 2^40 = 1,099,511,627,776
@@ -259,23 +264,30 @@ export function computeHeightFromMsgNonce(msgNonceBigInt: bigint): number {
       `msgNonce exceeds maximum allowed value (2^40): ${msgNonceBigInt.toString()}`,
     )
   }
-  const height = treeHeight(Number(msgNonceBigInt))
+
+  // if msgNonce is 0, no leaves have been appended to the tree, so height is 0
+  if (msgNonceBigInt === 0n) return 0
+
+  // Otherwise, msgNonce is the index of the NEXT leaf
+  // We compute tree hight at time of last leaf insertion
+  const height = merkleTreeHeight(Number(msgNonceBigInt) - 1)
+
   return height
 }
 
 /** @internal */
-// Computes bit length of a number
-function treeHeight(msgNonce: number): number {
-  if (msgNonce === 0) return 0
-
-  // msgNonce is the index of the NEXT leaf
-  // This way we compute tree hight at time of last leaf insertion
-  let lastMsgNonce = msgNonce - 1
+// Computes the height of the tree from node indexed nodeIndex
+// The height is the number of bits needed to represent the msgNonce
+function merkleTreeHeight(nodeIndex: number): number {
+  let index = nodeIndex;
+  if (index < 0) {
+    throw new Error('Node index must be a non-negative integer')
+  }
 
   let height = 1
-  while (lastMsgNonce > 0) {
+  while (index > 0) {
     height++
-    lastMsgNonce >>= 1
+    index >>= 1
   }
 
   return height
@@ -453,8 +465,6 @@ export function buildWithdrawalProof(
   merkleTree: Record<number, Hex>[],
   treeHeight: number,
 ): Hex {
-  console.debug('[Debug] Building withdrawal proof')
-
   // Find the withdrawal nonce by checking level 0 of merkle tree
   const intermediateWithdrawals = Object.entries(merkleTree[0])
   const foundEntry = intermediateWithdrawals.find(
@@ -476,7 +486,6 @@ export function buildWithdrawalProof(
 
   const withdrawalProof = concat(siblingHashes)
 
-  console.debug(`[Debug] Final withdrawal proof: ${withdrawalProof}`)
   return withdrawalProof
 }
 
@@ -498,7 +507,7 @@ async function buildMerkleTree(
   const firstMsgNonce = intermediateWithdrawals[0][0]
   const lastMsgNonce =
     intermediateWithdrawals[intermediateWithdrawals.length - 1][0]
-  const treeHeight = computeHeightFromMsgNonce(BigInt(lastMsgNonce))
+  const treeHeight = merkleTreeHeight(Number(lastMsgNonce))
 
   // Create array of maps to store the merkle tree nodes
   const merkleTree: Record<number, Hex>[] = Array.from(
@@ -562,13 +571,6 @@ async function buildMerkleTree(
     })()
 
   if (computedRoot !== expectedRoot) {
-    console.debug('Merkle root verification failed!')
-    console.debug(`Expected: ${expectedRoot}`)
-    console.debug(`Computed: ${computedRoot}`)
-    console.debug(`Tree height: ${treeHeight}`)
-    console.debug(`Leaf count: ${intermediateWithdrawals.length}`)
-    console.debug(`Merkle tree: ${JSON.stringify(merkleTree, null, 2)}`)
-
     throw new Error(
       [
         'Merkle root verification failed!',
@@ -580,8 +582,6 @@ async function buildMerkleTree(
       ].join('\n'),
     )
   }
-
-  console.debug('✓ Merkle root verified successfully')
 
   return { merkleTree, treeHeight, withdrawalRoot: computedRoot }
 }
