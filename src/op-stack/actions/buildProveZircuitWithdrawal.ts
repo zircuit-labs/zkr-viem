@@ -143,7 +143,6 @@ export async function buildProveZircuitWithdrawal<
   // console.log('withdrawal', withdrawal);
   // console.log('withdrawalHash', withdrawalHash);
 
-
   // Get the nonce from the original withdrawal transaction
   // Extract the version to see if should return old withdrawals proof or new withdrawals proof
   const withdrawalLog = extractWithdrawalMessageLogs({ logs: receipt.logs })[0]
@@ -153,7 +152,7 @@ export async function buildProveZircuitWithdrawal<
 
   const { version: msgVersion } = extractNonceAndVersion(withdrawalLog)
 
-  // console.log(`msgNonce`, msgNonce);
+  // console.log(`msgVersion`, msgVersion);
 
   // Legacy withdrawals use old proofs -> version == 1
   if (msgVersion === 1) {
@@ -168,14 +167,14 @@ export async function buildProveZircuitWithdrawal<
       withdrawal,
       ...(game ? { game } : { output }),
     }) as unknown as BuildProveZircuitWithdrawalReturnType<
-    chain,
-    account,
-    chainOverride,
-    accountOverride
-  >
+      chain,
+      account,
+      chainOverride,
+      accountOverride
+    >
   }
   // New withdrawals use new proofs -> version == 2
-  else if(msgVersion === 2) {
+  if (msgVersion === 2) {
     // Extract block of transaction execution
     // and block of outputRoot
     const l2TxBlockNumber = receipt.blockNumber
@@ -184,10 +183,12 @@ export async function buildProveZircuitWithdrawal<
     // console.log(`l2TxBlockNumber`, l2TxBlockNumber);
     // console.log(`l2OutputRootBlockNumber`, l2OutputRootBlockNumber);
 
-
     // Initialize left and right hashes for merkleTree computation
     const rightHashes: Hex[] = initializeRightHashes()
-    const leftHashes: Hex[] = await initializeLeftHashes(client, l2TxBlockNumber)
+    const leftHashes: Hex[] = await initializeLeftHashes(
+      client,
+      l2TxBlockNumber,
+    )
 
     // console.log(`leftHashes`, leftHashes);
     // console.log(`rightHashes`, rightHashes);
@@ -198,9 +199,8 @@ export async function buildProveZircuitWithdrawal<
       l2TxBlockNumber,
       l2OutputRootBlockNumber,
     )
-    
-    // console.log(`intermediateWithdrawals`, intermediateWithdrawals);
 
+    // console.log(`intermediateWithdrawals`, intermediateWithdrawals);
 
     // Build the merkleTree for all intermediate withdrawals
     const { merkleTree, treeHeight, withdrawalRoot } = await buildMerkleTree(
@@ -214,7 +214,6 @@ export async function buildProveZircuitWithdrawal<
     // console.log(`merkleTree`, merkleTree);
     // console.log(`treeHeight`, treeHeight);
     // console.log(`withdrawalRoot`, withdrawalRoot);
-
 
     // Extract the withdrawal proof for current withdrawal from the tree
     const withdrawalProof: Hex = buildWithdrawalProof(
@@ -231,7 +230,7 @@ export async function buildProveZircuitWithdrawal<
     })
 
     // console.log(`outputRootBlock`, outputRootBlock);
-    
+
     return {
       account,
       l2OutputIndex: game?.index ?? output?.outputIndex,
@@ -251,10 +250,8 @@ export async function buildProveZircuitWithdrawal<
       accountOverride
     >
   }
-  else {
-  throw new Error('Unsupported version for withdrawal proof')
-  }
 
+  throw new Error('Unsupported version for withdrawal proof')
 }
 
 /** @internal */
@@ -392,7 +389,9 @@ export async function initializeLeftHashes(
       getStorageAt(client, {
         address: contracts.l2ToL1MessagePasser.address,
         blockNumber: l2TxBlockNumber - 1n,
-        slot: toHex(i + contracts.l2ToL1MessagePasser.leftHashesOffset, { size: 32 }),
+        slot: toHex(i + contracts.l2ToL1MessagePasser.leftHashesOffset, {
+          size: 32,
+        }),
       }),
     )
 
@@ -420,16 +419,17 @@ export async function fetchIntermediateWithdrawals(
 ): Promise<[number, Hex][]> {
   // Set block range limit (Zircuit RPC providers has a 50k block limit)
   const BLOCK_RANGE_LIMIT = 20000n
-  
+
   // Fetch all withdrawals between fromBlock and toBlock
   let submittedWithdrawalLogs: Log[] = []
-  
+
   // Paginate through blocks
   let currentFromBlock = fromBlockNumber
   while (currentFromBlock <= toBlockNumber) {
-    const currentToBlock = (currentFromBlock + BLOCK_RANGE_LIMIT) > toBlockNumber 
-      ? toBlockNumber 
-      : currentFromBlock + BLOCK_RANGE_LIMIT - 1n
+    const currentToBlock =
+      currentFromBlock + BLOCK_RANGE_LIMIT > toBlockNumber
+        ? toBlockNumber
+        : currentFromBlock + BLOCK_RANGE_LIMIT - 1n
 
     const logs = await getLogs(client, {
       address: contracts.l2ToL1MessagePasser.address,
@@ -441,7 +441,7 @@ export async function fetchIntermediateWithdrawals(
     })
 
     submittedWithdrawalLogs = [...submittedWithdrawalLogs, ...logs]
-    
+
     // Move to next block range
     currentFromBlock = currentToBlock + 1n
   }
@@ -455,7 +455,7 @@ export async function fetchIntermediateWithdrawals(
   // We extract just the nonce and hash from each log
   const withdrawalTransactionsArray: [number, Hex][] = parsedLogs
     .map((log) => {
-      const { nonce } = extractNonceAndVersion(log);
+      const { nonce } = extractNonceAndVersion(log)
       return [nonce, log.args.withdrawalHash] as [number, Hex]
     })
     .sort((a, b) => a[0] - b[0]) // sort by nonce
@@ -664,7 +664,6 @@ async function buildMerkleTree(
   return { merkleTree, treeHeight, withdrawalRoot: computedRoot }
 }
 
-
 /**
  * Extracts the nonce and version from a withdrawal message log
  * @param withdrawalLog The withdrawal message log to extract from
@@ -672,15 +671,19 @@ async function buildMerkleTree(
  * @internal
  */
 function extractNonceAndVersion(withdrawalLog: { args: { nonce: bigint } }) {
-  const NONCE_MASK = BigInt('0x0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF')
+  const NONCE_MASK = BigInt(
+    '0x0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
+  )
   const VERSION_SHIFT = BigInt(240)
   const MAX_NONCE = BigInt(1) << BigInt(40) // 2^40
-  
+
   const rawNonce = BigInt(withdrawalLog.args.nonce) & NONCE_MASK
   if (rawNonce >= MAX_NONCE) {
-    throw new Error(`Nonce exceeds maximum allowed value (2^40): ${rawNonce.toString()}`)
+    throw new Error(
+      `Nonce exceeds maximum allowed value (2^40): ${rawNonce.toString()}`,
+    )
   }
-  
+
   const nonce = Number(rawNonce)
   const version = Number(BigInt(withdrawalLog.args.nonce) >> VERSION_SHIFT)
   return { nonce, version }
