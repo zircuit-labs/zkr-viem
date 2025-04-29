@@ -16,6 +16,7 @@ import type {
   DeriveChain,
   GetChainParameter,
 } from '../../types/chain.js'
+import type { Log } from '../../types/log.js'
 import type { Hex } from '../../types/misc.js'
 import type { OneOf, Prettify } from '../../types/utils.js'
 import { concat } from '../../utils/data/concat.js'
@@ -34,6 +35,7 @@ import { toHex } from '../../utils/encoding/toHex.js'
 import { l2ToL1MessagePasserAbi } from '../abis.js'
 import { extractWithdrawalMessageLogs } from '../utils/extractWithdrawalMessageLogs.js'
 import { getWithdrawals } from '../utils/getWithdrawals.js'
+import { buildProveWithdrawal } from './buildProveWithdrawal.js'
 
 const outputRootProofVersion =
   '0x0000000000000000000000000000000000000000000000000000000000000000' as const
@@ -138,61 +140,121 @@ export async function buildProveZircuitWithdrawal<
   const [withdrawal] = getWithdrawals(receipt)
   const { withdrawalHash } = withdrawal
 
-  // Extract block of transaction execution
-  // and block of outputRoot
-  const l2TxBlockNumber = receipt.blockNumber
-  const { l2BlockNumber: l2OutputRootBlockNumber } = game ?? output
+  // console.log('withdrawal', withdrawal);
+  // console.log('withdrawalHash', withdrawalHash);
 
-  // Initialize left and right hashes for merkleTree computation
-  const rightHashes: Hex[] = initializeRightHashes()
-  const leftHashes: Hex[] = await initializeLeftHashes(client, l2TxBlockNumber)
 
-  // Fetch all withdrawals submitted between the two blocks
-  const intermediateWithdrawals = await fetchIntermediateWithdrawals(
-    client,
-    l2TxBlockNumber,
-    l2OutputRootBlockNumber,
-  )
+  // Get the nonce from the original withdrawal transaction
+  // Extract the version to see if should return old withdrawals proof or new withdrawals proof
+  const withdrawalLog = extractWithdrawalMessageLogs({ logs: receipt.logs })[0]
+  if (!withdrawalLog) {
+    throw new Error('No withdrawal log found in receipt')
+  }
 
-  // Build the merkleTree for all intermediate withdrawals
-  const { merkleTree, treeHeight, withdrawalRoot } = await buildMerkleTree(
-    client,
-    intermediateWithdrawals,
-    leftHashes,
-    rightHashes,
-    l2OutputRootBlockNumber,
-  )
+  const { version: msgVersion } = extractNonceAndVersion(withdrawalLog)
 
-  // Extract the withdrawal proof for current withdrawal from the tree
-  const withdrawalProof: Hex = buildWithdrawalProof(
-    withdrawalHash,
-    merkleTree,
-    treeHeight,
-  )
+  // console.log(`msgNonce`, msgNonce);
 
-  // Fetch the outputRoot proof parts from the outputRoot block
-  const outputRootBlock = await getBlock(client, {
-    blockNumber: l2OutputRootBlockNumber,
-  })
+  // Legacy withdrawals use old proofs -> version == 1
+  if (msgVersion === 1) {
+    // First check if withdrawal was successfully extracted
+    if (!withdrawal) {
+      throw new Error('No withdrawal found in receipt')
+    }
 
-  return {
-    account,
-    l2OutputIndex: game?.index ?? output?.outputIndex,
-    outputRootProof: {
-      latestBlockhash: outputRootBlock.hash,
-      messagePasserStorageRoot: withdrawalRoot,
-      stateRoot: outputRootBlock.stateRoot,
-      version: outputRootProofVersion,
-    },
-    targetChain: chain,
-    withdrawalProof: [withdrawalProof],
-    withdrawal,
-  } as unknown as BuildProveZircuitWithdrawalReturnType<
+    return buildProveWithdrawal(client, {
+      account,
+      chain,
+      withdrawal,
+      ...(game ? { game } : { output }),
+    }) as unknown as BuildProveZircuitWithdrawalReturnType<
     chain,
     account,
     chainOverride,
     accountOverride
   >
+  }
+  // New withdrawals use new proofs -> version == 2
+  else if(msgVersion === 2) {
+    // Extract block of transaction execution
+    // and block of outputRoot
+    const l2TxBlockNumber = receipt.blockNumber
+    const { l2BlockNumber: l2OutputRootBlockNumber } = game ?? output
+
+    // console.log(`l2TxBlockNumber`, l2TxBlockNumber);
+    // console.log(`l2OutputRootBlockNumber`, l2OutputRootBlockNumber);
+
+
+    // Initialize left and right hashes for merkleTree computation
+    const rightHashes: Hex[] = initializeRightHashes()
+    const leftHashes: Hex[] = await initializeLeftHashes(client, l2TxBlockNumber)
+
+    // console.log(`leftHashes`, leftHashes);
+    // console.log(`rightHashes`, rightHashes);
+
+    // Fetch all withdrawals submitted between the two blocks
+    const intermediateWithdrawals = await fetchIntermediateWithdrawals(
+      client,
+      l2TxBlockNumber,
+      l2OutputRootBlockNumber,
+    )
+    
+    // console.log(`intermediateWithdrawals`, intermediateWithdrawals);
+
+
+    // Build the merkleTree for all intermediate withdrawals
+    const { merkleTree, treeHeight, withdrawalRoot } = await buildMerkleTree(
+      client,
+      intermediateWithdrawals,
+      leftHashes,
+      rightHashes,
+      l2OutputRootBlockNumber,
+    )
+
+    // console.log(`merkleTree`, merkleTree);
+    // console.log(`treeHeight`, treeHeight);
+    // console.log(`withdrawalRoot`, withdrawalRoot);
+
+
+    // Extract the withdrawal proof for current withdrawal from the tree
+    const withdrawalProof: Hex = buildWithdrawalProof(
+      withdrawalHash,
+      merkleTree,
+      treeHeight,
+    )
+
+    // console.log(`withdrawalProof`, withdrawalProof);
+
+    // Fetch the outputRoot proof parts from the outputRoot block
+    const outputRootBlock = await getBlock(client, {
+      blockNumber: l2OutputRootBlockNumber,
+    })
+
+    // console.log(`outputRootBlock`, outputRootBlock);
+    
+    return {
+      account,
+      l2OutputIndex: game?.index ?? output?.outputIndex,
+      outputRootProof: {
+        latestBlockhash: outputRootBlock.hash,
+        messagePasserStorageRoot: withdrawalRoot,
+        stateRoot: outputRootBlock.stateRoot,
+        version: outputRootProofVersion,
+      },
+      targetChain: chain,
+      withdrawalProof: [withdrawalProof],
+      withdrawal,
+    } as unknown as BuildProveZircuitWithdrawalReturnType<
+      chain,
+      account,
+      chainOverride,
+      accountOverride
+    >
+  }
+  else {
+  throw new Error('Unsupported version for withdrawal proof')
+  }
+
 }
 
 /** @internal */
@@ -330,7 +392,7 @@ export async function initializeLeftHashes(
       getStorageAt(client, {
         address: contracts.l2ToL1MessagePasser.address,
         blockNumber: l2TxBlockNumber - 1n,
-        slot: toHex(i + 2, { size: 32 }),
+        slot: toHex(i + contracts.l2ToL1MessagePasser.leftHashesOffset, { size: 32 }),
       }),
     )
 
@@ -356,14 +418,33 @@ export async function fetchIntermediateWithdrawals(
   fromBlockNumber: bigint,
   toBlockNumber: bigint,
 ): Promise<[number, Hex][]> {
-  const submittedWithdrawalLogs = await getLogs(client, {
-    address: contracts.l2ToL1MessagePasser.address,
-    fromBlock: fromBlockNumber,
-    toBlock: toBlockNumber,
-    event: l2ToL1MessagePasserAbi.find(
-      (x) => x.type === 'event' && x.name === 'MessagePassed',
-    ),
-  })
+  // Set block range limit (Zircuit RPC providers has a 50k block limit)
+  const BLOCK_RANGE_LIMIT = 20000n
+  
+  // Fetch all withdrawals between fromBlock and toBlock
+  let submittedWithdrawalLogs: Log[] = []
+  
+  // Paginate through blocks
+  let currentFromBlock = fromBlockNumber
+  while (currentFromBlock <= toBlockNumber) {
+    const currentToBlock = (currentFromBlock + BLOCK_RANGE_LIMIT) > toBlockNumber 
+      ? toBlockNumber 
+      : currentFromBlock + BLOCK_RANGE_LIMIT - 1n
+
+    const logs = await getLogs(client, {
+      address: contracts.l2ToL1MessagePasser.address,
+      fromBlock: currentFromBlock,
+      toBlock: currentToBlock,
+      event: l2ToL1MessagePasserAbi.find(
+        (x) => x.type === 'event' && x.name === 'MessagePassed',
+      ),
+    })
+
+    submittedWithdrawalLogs = [...submittedWithdrawalLogs, ...logs]
+    
+    // Move to next block range
+    currentFromBlock = currentToBlock + 1n
+  }
 
   // Parse the logs using the helper function
   const parsedLogs = extractWithdrawalMessageLogs({
@@ -372,13 +453,10 @@ export async function fetchIntermediateWithdrawals(
 
   // Nonce has the version encoded in the high bits
   // We extract just the nonce and hash from each log
-  const NONCE_MASK = BigInt(
-    '0x0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF',
-  )
   const withdrawalTransactionsArray: [number, Hex][] = parsedLogs
     .map((log) => {
-      const demaskedNonce = BigInt(log.args.nonce) & NONCE_MASK
-      return [Number(demaskedNonce), log.args.withdrawalHash] as [number, Hex]
+      const { nonce } = extractNonceAndVersion(log);
+      return [nonce, log.args.withdrawalHash] as [number, Hex]
     })
     .sort((a, b) => a[0] - b[0]) // sort by nonce
 
@@ -584,4 +662,26 @@ async function buildMerkleTree(
   }
 
   return { merkleTree, treeHeight, withdrawalRoot: computedRoot }
+}
+
+
+/**
+ * Extracts the nonce and version from a withdrawal message log
+ * @param withdrawalLog The withdrawal message log to extract from
+ * @returns Object containing the nonce and version
+ * @internal
+ */
+function extractNonceAndVersion(withdrawalLog: { args: { nonce: bigint } }) {
+  const NONCE_MASK = BigInt('0x0000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF')
+  const VERSION_SHIFT = BigInt(240)
+  const MAX_NONCE = BigInt(1) << BigInt(40) // 2^40
+  
+  const rawNonce = BigInt(withdrawalLog.args.nonce) & NONCE_MASK
+  if (rawNonce >= MAX_NONCE) {
+    throw new Error(`Nonce exceeds maximum allowed value (2^40): ${rawNonce.toString()}`)
+  }
+  
+  const nonce = Number(rawNonce)
+  const version = Number(BigInt(withdrawalLog.args.nonce) >> VERSION_SHIFT)
+  return { nonce, version }
 }

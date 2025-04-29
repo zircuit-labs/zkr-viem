@@ -5,6 +5,7 @@ import type { Hex } from './misc.js'
 export interface L2ToL1MessagePasserContract extends ChainContract {
   withdrawalRootStorageSlot: Hex
   msgNonceStorageSlot: Hex
+  leftHashesOffset: number
 }
 
 // Explicit contract mapping
