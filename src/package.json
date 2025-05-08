@@ -1,5 +1,5 @@
 {
-  "name": "@zircuit-labs/zkr-viem",
+  "name": "zkr-viem",
   "description": "TypeScript Interface for Ethereum & Zircuit",
   "version": "1.2.2",
   "type": "module",
