@@ -11,7 +11,7 @@ import {
   encodeErrorResult,
   encodeFunctionResult,
   parseAbi,
-} from '~viem/index.js'
+} from '~zkr-viem/index.js'
 import { reset } from '../test/reset.js'
 import { getEnsText } from './getEnsText.js'
 

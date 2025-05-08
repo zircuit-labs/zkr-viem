@@ -7,7 +7,7 @@ import { createHttpServer } from '~test/src/utils.js'
 import { anvilMainnet } from '../../../test/src/anvil.js'
 import { getBlockNumber, mine } from '../../actions/index.js'
 
-import { keccak256 } from '~viem/index.js'
+import { keccak256 } from '~zkr-viem/index.js'
 import { numberToHex, toHex } from '../encoding/toHex.js'
 import * as withTimeout from '../promise/withTimeout.js'
 import { wait } from '../wait.js'

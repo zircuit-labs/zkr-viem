@@ -1,4 +1,4 @@
-import { privateKeyToAccount } from '~viem/accounts/privateKeyToAccount.js'
+import { privateKeyToAccount } from '~zkr-viem/accounts/privateKeyToAccount.js'
 import {
   VerifyingPaymaster_07,
   VerifyingPaymaster_08,

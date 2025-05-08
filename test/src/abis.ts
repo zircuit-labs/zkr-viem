@@ -1,4 +1,4 @@
-import { multicall3Abi, smartAccountAbi } from '~viem/constants/abis.js'
+import { multicall3Abi, smartAccountAbi } from '~zkr-viem/constants/abis.js'
 
 export const erc20Abi = [
   {

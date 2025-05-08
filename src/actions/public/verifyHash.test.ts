@@ -15,7 +15,7 @@ import {
   entryPoint07Abi,
   entryPoint07Address,
   toPackedUserOperation,
-} from '~viem/account-abstraction/index.js'
+} from '~zkr-viem/account-abstraction/index.js'
 import { getSmartAccounts_07 } from '../../../test/src/account-abstraction.js'
 import { bundlerMainnet } from '../../../test/src/bundler.js'
 import { privateKeyToAccount } from '../../accounts/privateKeyToAccount.js'

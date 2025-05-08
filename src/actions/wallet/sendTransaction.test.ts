@@ -6,7 +6,7 @@ import { anvilMainnet, anvilSepolia } from '../../../test/src/anvil.js'
 import { privateKeyToAccount } from '../../accounts/privateKeyToAccount.js'
 import { celo, localhost, mainnet, optimism } from '../../chains/index.js'
 
-import { maxUint256 } from '~viem/constants/number.js'
+import { maxUint256 } from '~zkr-viem/constants/number.js'
 import { BatchCallDelegation } from '../../../contracts/generated.js'
 import { getSmartAccounts_07 } from '../../../test/src/account-abstraction.js'
 import { deploy } from '../../../test/src/utils.js'
