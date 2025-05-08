@@ -2,7 +2,10 @@ import { afterAll, beforeAll, beforeEach, vi } from 'vitest'
 
 import { setIntervalMining } from '~zkr-viem/actions/test/setIntervalMining.js'
 import { cleanupCache, listenersCache } from '~zkr-viem/utils/observe.js'
-import { promiseCache, responseCache } from '~zkr-viem/utils/promise/withCache.js'
+import {
+  promiseCache,
+  responseCache,
+} from '~zkr-viem/utils/promise/withCache.js'
 import { socketClientCache } from '~zkr-viem/utils/rpc/socket.js'
 
 import { setErrorConfig } from '../src/errors/base.js'
