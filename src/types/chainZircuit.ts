@@ -5,10 +5,11 @@ import type { Hex } from './misc.js'
 export interface L2ToL1MessagePasserContract extends ChainContract {
   withdrawalRootStorageSlot: Hex
   msgNonceStorageSlot: Hex
+  leftHashesOffset: number
 }
 
 // Explicit contract mapping
-export interface ZircuitContractsMap {
+interface ZircuitContractsMap {
   gasPriceOracle: ChainContract
   l1Block: ChainContract
   l2CrossDomainMessenger: ChainContract
