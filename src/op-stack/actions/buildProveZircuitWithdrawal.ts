@@ -485,7 +485,7 @@ export async function fetchIntermediateWithdrawals(
           ),
         )
 
-  // Get the nonce at block before first withdrawal
+  // Get the nonce at block after the output root block
   const msgNonceAfterOuptutRootBlock = Number(
     hexToBigInt(
       (await getStorageAt(client, {
