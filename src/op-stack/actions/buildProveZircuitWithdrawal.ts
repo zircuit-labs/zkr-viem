@@ -1,4 +1,4 @@
-import type { Address } from 'abitype'
+import { parseAbi, type Address } from 'abitype'
 import {
   type GetBlockErrorType,
   getBlock,
@@ -18,17 +18,16 @@ import type {
 } from '../../types/chain.js'
 import type { Log } from '../../types/log.js'
 import type { Hex } from '../../types/misc.js'
-import type { OneOf, Prettify } from '../../types/utils.js'
+import type { Prettify } from '../../types/utils.js'
 import { concat } from '../../utils/data/concat.js'
 import { keccak256 } from '../../utils/hash/keccak256.js'
 import { contracts } from '../contractsZircuit.js'
 import type { Withdrawal } from '../types/withdrawal.js'
 import type { GetWithdrawalsErrorType } from '../utils/getWithdrawals.js'
-import type { GetGameReturnType } from './getGame.js'
 import type { GetL2OutputReturnType } from './getL2Output.js'
 import type { ProveWithdrawalParameters } from './proveWithdrawal.js'
 
-import { getStorageAt } from '../../actions/index.js'
+import { getStorageAt, readContract } from '../../actions/index.js'
 import { getLogs } from '../../actions/index.js'
 import type { TransactionReceipt } from '../../types/transaction.js'
 import { hexToBigInt } from '../../utils/encoding/fromHex.js'
@@ -68,7 +67,9 @@ export type BuildProveZircuitWithdrawalParameters<
   GetChainParameter<chain, chainOverride> & {
     receipt: TransactionReceipt
     withdrawal?: Withdrawal
-  } & OneOf<{ output: GetL2OutputReturnType } | { game: GetGameReturnType }>
+    l1Client?: Client
+    l2OutputOracleAddress?: Address
+  } & { output?: GetL2OutputReturnType }
 
 export type BuildProveZircuitWithdrawalReturnType<
   chain extends Chain | undefined = Chain | undefined,
@@ -136,7 +137,45 @@ export async function buildProveZircuitWithdrawal<
     accountOverride
   >
 > {
-  const { account, chain = client.chain, game, output, receipt } = args
+  const {
+    account,
+    chain = client.chain,
+    receipt,
+    l1Client,
+    l2OutputOracleAddress,
+  } = args
+
+  const output =
+    args.output ??
+    ((await (async () => {
+      if (!l1Client) {
+        throw new Error(
+          'L1 client not provided, provide one or provide an output',
+        )
+      }
+      if (!l2OutputOracleAddress) {
+        throw new Error(
+          'L2 Output Oracle address not provided, provide one or provide an output',
+        )
+      }
+      const l2OutputOracleAbi = parseAbi([
+        'function getL2OutputIndexAfter(uint256 _l2BlockNumber) view returns (uint256)',
+        'function getL2Output(uint256 _l2OutputIndex) view returns ((bytes32 outputRoot, uint256 timestamp, uint256 l2BlockNumber))',
+      ])
+      const outputIndex = await readContract(l1Client, {
+        address: l2OutputOracleAddress,
+        abi: l2OutputOracleAbi,
+        functionName: 'getL2OutputIndexAfter',
+        args: [receipt.blockNumber],
+      })
+      const output = await readContract(l1Client, {
+        address: l2OutputOracleAddress,
+        abi: l2OutputOracleAbi,
+        functionName: 'getL2Output',
+        args: [outputIndex],
+      })
+      return { outputIndex, ...output }
+    })()) as GetL2OutputReturnType)
 
   // Extract withdrawal from receipt
   const [withdrawal] = args.withdrawal
@@ -164,7 +203,7 @@ export async function buildProveZircuitWithdrawal<
       account,
       chain,
       withdrawal,
-      ...(game ? { game } : { output }),
+      output,
     }) as unknown as BuildProveZircuitWithdrawalReturnType<
       chain,
       account,
@@ -177,7 +216,7 @@ export async function buildProveZircuitWithdrawal<
     // Extract block of transaction execution
     // and block of outputRoot
     const l2TxBlockNumber = receipt.blockNumber
-    const { l2BlockNumber: l2OutputRootBlockNumber } = game ?? output
+    const { l2BlockNumber: l2OutputRootBlockNumber } = output
 
     // Initialize left and right hashes for merkleTree computation
     const rightHashes: Hex[] = initializeRightHashes()
@@ -216,7 +255,7 @@ export async function buildProveZircuitWithdrawal<
 
     return {
       account,
-      l2OutputIndex: game?.index ?? output?.outputIndex,
+      l2OutputIndex: output.outputIndex,
       outputRootProof: {
         latestBlockhash: outputRootBlock.hash,
         messagePasserStorageRoot: withdrawalRoot,
