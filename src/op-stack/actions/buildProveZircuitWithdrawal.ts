@@ -144,8 +144,6 @@ export async function buildProveZircuitWithdrawal<
     : getWithdrawals(receipt)
   const { withdrawalHash } = withdrawal
 
-  // console.log('withdrawal', withdrawal);
-  // console.log('withdrawalHash', withdrawalHash);
 
   // Get the nonce from the original withdrawal transaction
   // Extract the version to see if should return old withdrawals proof or new withdrawals proof
@@ -156,7 +154,6 @@ export async function buildProveZircuitWithdrawal<
 
   const { version: msgVersion } = extractNonceAndVersion(withdrawalLog)
 
-  // console.log(`msgVersion`, msgVersion);
 
   // Legacy withdrawals use old proofs -> version == 1
   if (msgVersion === 1) {
@@ -184,8 +181,6 @@ export async function buildProveZircuitWithdrawal<
     const l2TxBlockNumber = receipt.blockNumber
     const { l2BlockNumber: l2OutputRootBlockNumber } = game ?? output
 
-    // console.log(`l2TxBlockNumber`, l2TxBlockNumber);
-    // console.log(`l2OutputRootBlockNumber`, l2OutputRootBlockNumber);
 
     // Initialize left and right hashes for merkleTree computation
     const rightHashes: Hex[] = initializeRightHashes()
@@ -194,8 +189,6 @@ export async function buildProveZircuitWithdrawal<
       l2TxBlockNumber,
     )
 
-    // console.log(`leftHashes`, leftHashes);
-    // console.log(`rightHashes`, rightHashes);
 
     // Fetch all withdrawals submitted between the two blocks
     const intermediateWithdrawals = await fetchIntermediateWithdrawals(
@@ -204,7 +197,6 @@ export async function buildProveZircuitWithdrawal<
       l2OutputRootBlockNumber,
     )
 
-    // console.log(`intermediateWithdrawals`, intermediateWithdrawals);
 
     // Build the merkleTree for all intermediate withdrawals
     const { merkleTree, treeHeight, withdrawalRoot } = await buildMerkleTree(
@@ -215,9 +207,6 @@ export async function buildProveZircuitWithdrawal<
       l2OutputRootBlockNumber,
     )
 
-    // console.log(`merkleTree`, merkleTree);
-    // console.log(`treeHeight`, treeHeight);
-    // console.log(`withdrawalRoot`, withdrawalRoot);
 
     // Extract the withdrawal proof for current withdrawal from the tree
     const withdrawalProof: Hex = buildWithdrawalProof(
@@ -226,14 +215,12 @@ export async function buildProveZircuitWithdrawal<
       treeHeight,
     )
 
-    // console.log(`withdrawalProof`, withdrawalProof);
 
     // Fetch the outputRoot proof parts from the outputRoot block
     const outputRootBlock = await getBlock(client, {
       blockNumber: l2OutputRootBlockNumber,
     })
 
-    // console.log(`outputRootBlock`, outputRootBlock);
 
     return {
       account,
