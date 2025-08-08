@@ -147,14 +147,9 @@ export async function buildProveZircuitWithdrawal<
   // console.log('withdrawal', withdrawal);
   // console.log('withdrawalHash', withdrawalHash);
 
-  // Get the nonce from the original withdrawal transaction
-  // Extract the version to see if should return old withdrawals proof or new withdrawals proof
-  const withdrawalLog = extractWithdrawalMessageLogs({ logs: receipt.logs })[0]
-  if (!withdrawalLog) {
-    throw new Error('No withdrawal log found in receipt')
-  }
-
-  const { version: msgVersion } = extractNonceAndVersion(withdrawalLog)
+  const { version: msgVersion } = extractNonceAndVersion({
+    args: { nonce: withdrawal.nonce },
+  })
 
   // console.log(`msgVersion`, msgVersion);
 
