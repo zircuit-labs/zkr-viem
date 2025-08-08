@@ -1,4 +1,4 @@
-import { parseAbi, type Address } from 'abitype'
+import { type Address, parseAbi } from 'abitype'
 import {
   type GetBlockErrorType,
   getBlock,
