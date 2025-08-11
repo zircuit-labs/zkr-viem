@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-Viem aims to the latest major release up-to-date with security-related patches.
+Zircuit-Viem aims to the latest major release up-to-date with security-related patches.
 
-If you urgently require a patch to be applied to a previous unsupported version, please contact dev@wevm.dev.
+If you urgently require a patch to be applied to a previous unsupported version, please contact us on bugbounty@zircuit.com.
 
 | Version | Supported          |
 | ------- | ------------------ |
@@ -13,7 +13,7 @@ If you urgently require a patch to be applied to a previous unsupported version,
 
 ## Reporting a Vulnerability
 
-If you identify a vulnerability in this library, please email dev@wevm.dev with:
+If you identify a vulnerability in this library, please contact us on bugbounty@zircuit.com with:
 
 - Description
 - Suggested impact (Critical, High, Medium, Low)
