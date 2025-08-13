@@ -1,7 +1,13 @@
 import { createServer } from 'prool'
 import { type AnvilParameters, anvil } from 'prool/instances'
 
-import { mainnet, optimism, sepolia, zksync } from '../../src/chains/index.js'
+import {
+  mainnet,
+  optimism,
+  optimismSepolia,
+  sepolia,
+  zksync,
+} from '../../src/chains/index.js'
 import { ipc } from '../../src/clients/transports/ipc.js'
 import {
   http,
@@ -31,7 +37,7 @@ export const anvilMainnet = defineAnvil({
 export const anvilSepolia = defineAnvil({
   chain: sepolia,
   forkUrl: getEnv('VITE_ANVIL_FORK_URL_SEPOLIA', 'https://rpc.sepolia.org'),
-  forkBlockNumber: 5858117n,
+  forkBlockNumber: 8975598n,
   noMining: true,
   port: 8845,
 })
@@ -44,6 +50,13 @@ export const anvilOptimism = defineAnvil({
   ),
   forkBlockNumber: 113624777n,
   port: 8645,
+})
+
+export const anvilZircuitSepolia = defineAnvil({
+  chain: optimismSepolia,
+  forkUrl: getEnv('VITE_ANVIL_FORK_URL_ZIRCUIT_SEPOLIA', ''),
+  forkBlockNumber: 7377803n,
+  port: 8945,
 })
 
 export const anvilZksync = defineAnvil({
