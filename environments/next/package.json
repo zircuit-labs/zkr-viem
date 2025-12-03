@@ -10,7 +10,7 @@
     "test": "playwright test"
   },
   "dependencies": {
-    "next": "^15.4.6",
+    "next": "^15.4.8",
     "react": "^19",
     "react-dom": "^19",
     "viem": "file:../../src/"
